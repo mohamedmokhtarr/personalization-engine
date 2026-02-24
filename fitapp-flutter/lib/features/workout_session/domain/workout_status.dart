@@ -1,0 +1,1 @@
+enum WorkoutStatus { notStarted, inProgress, resting, completed }
