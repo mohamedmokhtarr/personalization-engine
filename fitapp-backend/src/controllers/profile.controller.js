@@ -6,21 +6,30 @@ exports.upsertProfile = async (req, res, next) => {
   try {
     const { userId, weight, height, age, gender, activityLevel, injury } = req.body;
 
-    const profile = await UserProfile.findOneAndUpdate(
-      { userId },
-      { userId, weight, height, age, gender, activityLevel, injury: injury || "none" },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-    );
+    // Use findOneAndUpdate only to upsert the document shell,
+    // then load it with .findOne() so pre-save hooks run via .save()
+    let profile = await UserProfile.findOne({ userId });
 
-    // Trigger pre-save hook manually after findOneAndUpdate
-    // (Mongoose doesn't run pre-save on update — so we recalculate here)
-    const MULTIPLIERS = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, extreme:1.9 };
+    if (!profile) {
+      profile = new UserProfile({ userId });
+    }
 
-    profile.bmi = parseFloat((weight / Math.pow(height / 100, 2)).toFixed(1));
-    profile.bmr = gender === "male"
-      ? Math.round(10 * weight + 6.25 * height - 5 * age + 5)
-      : Math.round(10 * weight + 6.25 * height - 5 * age - 161);
-    profile.tdee = Math.round(profile.bmr * MULTIPLIERS[activityLevel]);
+    // Update fields
+    profile.weight        = weight;
+    profile.height        = height;
+    profile.age           = age;
+    profile.gender        = gender;
+    profile.activityLevel = activityLevel;
+    profile.injury        = injury || "none";
+
+    // pre-save hook will auto-compute BMI, BMR, TDEE
+    await profile.save();
+
+    // ── Weight history: push new entry, keep last 7 only ──
+    profile.weightHistory.push({ weight, date: new Date() });
+    if (profile.weightHistory.length > 7) {
+      profile.weightHistory.shift();
+    }
     await profile.save();
 
     const bmiCategory = profile.getBMICategory();
@@ -36,6 +45,7 @@ exports.upsertProfile = async (req, res, next) => {
           bmr:         profile.bmr,
           tdee:        profile.tdee,
         },
+        weightHistory: profile.weightHistory,
       },
     });
   } catch (err) {
