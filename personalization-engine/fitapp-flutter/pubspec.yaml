@@ -1,0 +1,24 @@
+name: fitapp
+description: FitApp - Personalization & Goal Engine
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+
+flutter:
+  uses-material-design: true
+  # تم تعطيل الخطوط مؤقتاً لتجنب أخطاء التشغيل
+  # fonts:
+  #   - family: Cairo
+  #     fonts:
+  #       - asset: assets/fonts/Cairo-Regular.ttf
+  #       - asset: assets/fonts/Cairo-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Cairo-Black.ttf
+  #         weight: 900
