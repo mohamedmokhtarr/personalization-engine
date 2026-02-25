@@ -26,6 +26,14 @@ const userProfileSchema = new mongoose.Schema(
       default: "none",
     },
 
+    // ── Weight History (last 7 entries for graph) ─────────
+    weightHistory: [
+      {
+        weight: { type: Number },
+        date:   { type: Date, default: Date.now },
+      },
+    ],
+
     // ── Computed (stored for quick access) ────────────────
     bmi: { type: Number },
     bmr: { type: Number },
