@@ -3,10 +3,13 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// المسارات النسبية (Relative Paths) الصحيحة
 import '../../progress_tracking/domain/workout_set.dart';
 import '../../progress_tracking/logic/volume_calculator.dart';
 import '../../progress_tracking/data/progress_repository.dart';
-import '../../gamification/logic/gamification_provider.dart';
+
+// التعديل هنا: ليوصل للـ Provider اللي في الفولدر الجديد
+import '../../../providers/gamification_provider.dart';
 
 class SessionSummaryScreen extends StatelessWidget {
   final Map<String, List<WorkoutSet>> sessionSets;
@@ -55,7 +58,8 @@ class SessionSummaryScreen extends StatelessWidget {
 
     try {
       final response = await http.post(
-        Uri.parse("http://10.0.2.2:5000/api/progress/save"), // ← عدّلي هنا
+        // مثال لتعديل الرابط جوه الـ saveSessionToBackend والـ sendGamificationXP
+        Uri.parse("http://localhost:5000/api/progress/save"), // ← عدّلي هنا
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(data),
       );
@@ -75,7 +79,8 @@ class SessionSummaryScreen extends StatelessWidget {
   }) async {
     // XP for general workout
     await http.post(
-      Uri.parse("http://10.0.2.2:5000/api/gamification/add-xp"), // ← عدّلي هنا
+      // مثال لتعديل الرابط جوه الـ saveSessionToBackend والـ sendGamificationXP
+      Uri.parse("http://localhost:5000/api/gamification/add-xp"), // ← عدّلي هنا
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "userId": "yasmine-01",
@@ -87,7 +92,8 @@ class SessionSummaryScreen extends StatelessWidget {
     // XP per category
     for (var entry in exerciseDurations.entries) {
       await http.post(
-        Uri.parse("http://10.0.2.2:5000/api/gamification/add-xp"),
+// مثال لتعديل الرابط جوه الـ saveSessionToBackend والـ sendGamificationXP
+        Uri.parse("http://localhost:5000/api/progress/save"),  
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": "yasmine-01",
@@ -217,7 +223,7 @@ class SessionSummaryScreen extends StatelessWidget {
 
                 // Refresh provider at your side
                 Provider.of<GamificationProvider>(context, listen: false)
-                    .fetchProgress();
+                    .fetchProgress("yasmine-01");
 
                 Navigator.pop(context);
               },

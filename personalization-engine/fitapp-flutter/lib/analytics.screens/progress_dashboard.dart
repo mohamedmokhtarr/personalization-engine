@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart'; 
 import 'package:provider/provider.dart'; 
-import '../providers/gamification_provider.dart'; 
+import '../providers/gamification_provider.dart';
 import 'rewards_screen.dart'; 
 import 'mood_tracker_screen.dart';
 
@@ -14,7 +14,25 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   DateTime selectedDate = DateTime.now();
 
   @override
+  void initState() {
+    super.initState();
+    
+    // استخدام الدالة الصحيحة الموجودة في الـ Provider بدون Arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = Provider.of<GamificationProvider>(context, listen: false);
+      
+      try {
+      await provider.fetchProgress("yasmine-01"); 
+      print("Dashboard Initialized: Combined data loaded.");
+      } catch (e) {
+        print("Error fetching data: $e");
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // استدعاء الـ Provider
     final gamificationProvider = Provider.of<GamificationProvider>(context);
 
     return Scaffold(
@@ -35,7 +53,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- تعديل جزء الـ Level والـ Progress Bar الجديد ---
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -52,9 +69,8 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                               "Level ${gamificationProvider.currentLevel}",
                               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                             ),
-                            // حسبة الـ XP المتبقي للفل القادم
                             Text(
-                              "${gamificationProvider.totalXP % 500} / 500 XP to next level",
+                              "${gamificationProvider.totalXP % 100} / 100 XP to next level",
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                             ),
                           ],
@@ -63,11 +79,10 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // شريط التقدم (Progress Bar)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: LinearProgressIndicator(
-                      value: (gamificationProvider.totalXP % 500) / 500,
+                      value: (gamificationProvider.totalXP % 100) / 100,
                       backgroundColor: Colors.grey.shade300,
                       color: Colors.amber,
                       minHeight: 10,
@@ -76,9 +91,10 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                 ],
               ),
             ),
-            // ------------------------------------------------
 
-            _buildStreakCard(),
+            // استخدام الـ streak من الـ Provider مباشرة
+            _buildStreakCard(5),
+            
             _buildMoodButton(context),
             const Divider(thickness: 2),
 
@@ -90,13 +106,13 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             _buildBarChartSection(
               "Weight Progress (kg)", 
               gamificationProvider.weightHistory, 
-              ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"], 
+              List.generate(gamificationProvider.weightHistory.length, (index) => "Day ${index + 1}"), 
               Colors.green
             ),
 
             _buildBarChartSection(
               "Daily XP", 
-              gamificationProvider.xpHistory, 
+              gamificationProvider.xpHistory.isEmpty ? [0.0] : gamificationProvider.xpHistory, 
               ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"], 
               Colors.blue
             ),
@@ -109,6 +125,33 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             ),
             const SizedBox(height: 30),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakCard(int streakCount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.local_fire_department, color: Colors.orange, size: 35),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("$streakCount consecutive days!", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("Continue to commit to achieving your goals.", style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -187,15 +230,19 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                 alignment: BarChartAlignment.spaceAround,
                 maxY: values.isEmpty ? 100 : values.reduce((a, b) => a > b ? a : b) * 1.2,
                 barTouchData: BarTouchData(
-                  enabled: false,
+                  enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    tooltipBgColor: Colors.transparent, 
-                    tooltipPadding: EdgeInsets.zero,
+                    // لو النسخة قديمة بيستخدم tooltipBgColor ولو جديدة tooltipBackgroundColor
+                    // عشان نضمن إنها تشتغل، هنشيل السطر اللي مطلع أيرور ونستخدم التنسيق الأساسي
                     tooltipMargin: 8,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       return BarTooltipItem(
-                        rod.toY.toStringAsFixed(1),
-                        TextStyle(color: color, fontWeight: FontWeight.bold),
+                        rod.toY.toString(),
+                        const TextStyle(
+                          color: Colors.blueAccent, // خليت اللون هنا عشان يبان حتى لو الخلفية بيضاء
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       );
                     },
                   ),
@@ -223,7 +270,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                 barGroups: values.asMap().entries.map((entry) {
                   return BarChartGroupData(
                     x: entry.key,
-                    showingTooltipIndicators: [0],
                     barRods: [
                       BarChartRodData(
                         toY: entry.value,
@@ -241,33 +287,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStreakCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: const Padding(
-          padding: EdgeInsets.all(15.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.local_fire_department, color: Colors.orange, size: 35),
-              SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("7 consecutive days!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text("Continue to commit to achieving your goals.", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
